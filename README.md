@@ -1,4 +1,4 @@
-![Image](https://raw.githubusercontent.com/tconsta/pi_sockets/master/media/diagram.png)
+![Image](https://raw.githubusercontent.com/tconsta/pi_sockets/master/media/diagram_resized.png)
 # Project description
 Asynchronous sockets processing using the Selectors module of the Python Standard Library.
 
