@@ -3,20 +3,127 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Krona+One&display=swap" rel="stylesheet">
+    <meta http-equiv="refresh" content="30" >
     <title>Dashboard</title>
-      <style type="text/css">
-        body {
-        background-color: #ffb4a2;
+    <style type="text/css">
+
+      body {
+        background-color: #673c4f;
         text-align: center;
-      </style>
+        font-family: 'Krona One', sans-serif;
+      }
+      a:link { color: #000000; }
+      a:visited { color: #000000; }
+
+      .wrapper {
+        display: inline-block;
+        max-width: 828px;
+      }
+      .room {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        align-items: center;
+        min-width: 45vw;
+        background-color: #AD85AB;
+        box-shadow: 0px 10px 14px -7px #331E28;
+        border-radius:12px;
+        margin: 0px 10px 20px 10px;
+      }
+      .room-head {
+      }
+      .room-text {
+        display: inline-flex;
+        margin: 15px 20px 15px 20px;
+      }
+      .myButton {
+      	box-shadow: 0px 10px 14px -7px #625E82;
+      	background: #7698B3;
+      	background-color:#625E82;
+      	border-radius:8px;
+        border: 0px solid #000000;
+      	cursor:pointer;
+      	color:#000000;
+      	font-family: 'Krona One', sans-serif;;
+        font-weight: bold;
+      	padding:12px 28px;
+      	margin: 0px 5px 0px 5px;
+      	text-decoration:none;
+        }
+    </style>
   </head>
   <body>
-    <h1>Dashboard</h1>
-    <br>
-    <br>
-    <br>
-    <br>
-    <h2>Monitoring and control</h2>
+    <h1>Home dashboard</h1>
+    <div class="wrapper">
+      <div class="room">
+        <div class="room-head"><h2>Living Room</h2></div>
+        <div class="room-text" id="pi4b-temp">Temperature: 00.0°C</div>
+        <div class="room-text" id="pi4b-humid">Humidity: 00.0%</div>
+        <div class="room-text"><a href="log/pi4b" target="_blank">View log</a></div>
+        <div class="room-text">
+          <button class="myButton" id="fan-on" onclick="fanOn()">Fan ON </button>
+          <button class="myButton" id="fan-auto" onclick="fanAuto()">Fan AUTO</button>
+          <button class="myButton" id="fan-off" onclick="fanOff()">Fan OFF</button>
+        </div>
+      </div>
+      <div class="room">
+        <div class="room-head"><h2>Bedroom</h2></div>
+        <div class="room-text" id="pizero-temp">Temperature: 00.0°C</div>
+        <div class="room-text"><a href="log/pizero" target="_blank">View log</a></div>
+      </div>
+  </div>
+  <script type="text/javascript" charset="utf-8">
+    function httpGetAsync(method, callback) {
+        var xmlHttp = new XMLHttpRequest();
+        xmlHttp.onreadystatechange = function() {
+            if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+                callback(xmlHttp.responseText);
+        }
+        xmlHttp.open("GET", window.location.href + method, true);
+        xmlHttp.send(null);
+    }
 
+    function fanOn() {
+        console.log("Fan ON...");
+        httpGetAsync("fan/on", function(){ console.log("Done"); });
+
+        document.getElementById("fan-on").style.backgroundColor = "#48455F";
+        document.getElementById("fan-off").style.backgroundColor = "#625E82";
+        document.getElementById("fan-auto").style.backgroundColor = "#625E82";
+    }
+
+    function fanOff() {
+        console.log("Fan OFF...");
+        httpGetAsync("fan/off", function(){ console.log("Done"); });
+
+        document.getElementById("fan-off").style.backgroundColor = "#48455F";
+        document.getElementById("fan-on").style.backgroundColor = "#625E82";
+        document.getElementById("fan-auto").style.backgroundColor = "#625E82";
+    }
+
+    function fanAuto() {
+        console.log("Fan Auto...");
+        httpGetAsync("fan/auto", function(){ console.log("Done"); });
+
+        document.getElementById("fan-auto").style.backgroundColor = "#48455F";
+        document.getElementById("fan-on").style.backgroundColor = "#625E82";
+        document.getElementById("fan-off").style.backgroundColor = "#625E82";
+    }
+
+    // fan state
+    // the server will find this variable and change it
+    var fanState = "off_"
+    if (fanState == "off_") {
+      document.getElementById("fan-off").style.backgroundColor = "#48455F";
+    }
+    else if (fanState == "on__") {
+      document.getElementById("fan-on").style.backgroundColor = "#48455F";
+    }
+    else if (fanState == "auto") {
+      document.getElementById("fan-auto").style.backgroundColor = "#48455F";
+    }
+
+  </script>
   </body>
 </html>
