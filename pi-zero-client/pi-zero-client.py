@@ -11,8 +11,6 @@ SERVER_PORT = 5555
 HOSTNAME = 'pi-zero-w'  # Raspberry Pi Zero W
 SENSOR_GPIO = 4         # DS18B20 Digital thermometer
 
-LOG_TIMEOUT = 2         # DEBUG in seconds, change to minutes
-
 HOST = 0                # 'pi-4b', 'pi-zero-w'
 DATE = 1                # host date
 TIME = 2                # host time
@@ -25,6 +23,7 @@ base_dir = '/sys/bus/w1/devices/'
 device_folder = glob.glob(base_dir + '28*')[0]
 device_file = device_folder + '/w1_slave'
 
+LOG_TIMEOUT = 3         # in minutes
 
 # to send data at a given interval (LOG_TIMEOUT)
 last_time_sent = '23:59:59'
@@ -35,7 +34,7 @@ selector = selectors.DefaultSelector()
 
 def get_temp_raw():
 
-    f = open(device_file, 'r')
+    f = open(device_file)
     lines = f.readlines()
     f.close()
     return lines
@@ -51,7 +50,7 @@ def get_temperature():
     if equals_pos != -1:
         temp_string = lines[1][equals_pos + 2:]
         temp_c = float(temp_string) / 1000.0
-        return str(round(temp_c, 2))
+        return str(round(temp_c, 1))
 
 
 def send_data_to_server(sock):
@@ -71,7 +70,7 @@ def handle_request_from_server(sock):
 
     request = sock.recv(1024)
     print(request.decode('utf-8'))
-    # do something else
+    # and do something else
 
 
 def sending_timeout_check():
@@ -84,7 +83,7 @@ def sending_timeout_check():
     if time_delta.days < 0:
         time_delta = timedelta(days=0, seconds=time_delta.seconds, microseconds=time_delta.microseconds)
 
-    if time_delta.seconds > LOG_TIMEOUT:  # DEBUG: change to LOG_TIMEOUT*60
+    if time_delta.seconds > LOG_TIMEOUT*60:
         last_time_sent = now
         return True
     else:
