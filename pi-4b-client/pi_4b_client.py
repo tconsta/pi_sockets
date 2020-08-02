@@ -20,8 +20,6 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 GPIO.setup(RELAY_GPIO, GPIO.OUT, initial=GPIO.HIGH)  # turned off by default
 
-LOG_TIMEOUT = 2         # DEBUG in seconds, change to minutes
-
 HOST = 0                # 'pi-4b', 'pi-zero-w'
 DATE = 1                # host date
 TIME = 2                # host time
@@ -29,7 +27,14 @@ SENSOR_DATA1 = 3        # temperature
 SENSOR_DATA2 = 4        # humidity (pi-4b)
 RELAY_STATE = 5         # state 'on'/'off' (pi-4b)
 
-relay_state = 'off'     # turned off by default
+fan_state = 'off'       # turned off by default
+fan_mode = 'manual'
+fan_threshold = 25.0    # fan switch-on/off threshold temperature
+
+# to eliminate relay switching at minor temperature fluctuations
+TEMP_HYSTERESIS = 1.0
+
+LOG_TIMEOUT = 3         # in minutes
 
 # to send data at a given interval (LOG_TIMEOUT)
 last_time_sent = '23:59:59'
@@ -51,33 +56,60 @@ def send_data_to_server(sock):
     current_date = time.strftime('%d') + '.' + time.strftime('%m') + '.' + time.strftime('%Y')
     current_time = time.strftime('%H') + ':' + time.strftime('%M') + ':' + time.strftime('%S')
     temperature, humidity = get_temperature_and_humidity()
-    global relay_state
 
-    data_to_send = [HOSTNAME, current_date, current_time, temperature, humidity, relay_state]
+    global fan_state
+
+    data_to_send = [HOSTNAME, current_date, current_time, temperature, humidity, fan_state]
     response = ' '.join(data_to_send)
 
     sock.sendall(response.encode())
     print('sent to server:\n', response)
 
 
-def control_relay(request):
-    global relay_state
-    if request == 'turn on relay':
-        if relay_state == 'off':
-            # turn on relay
-            GPIO.output(RELAY_GPIO, GPIO.LOW)
-            relay_state = 'on'
-    if request == 'turn off relay':
-        if relay_state == 'on':
-            # turn off relay
+def fan_auto_control():
+
+    global fan_state
+    global fan_threshold
+
+    temperature, _ = get_temperature_and_humidity()
+
+    if fan_state == 'on':
+        if float(temperature) < (fan_threshold - TEMP_HYSTERESIS):
+            # turn off fan
             GPIO.output(RELAY_GPIO, GPIO.HIGH)
-            relay_state = 'off'
+            fan_state = 'off'
+    else:
+        if float(temperature) > (fan_threshold + TEMP_HYSTERESIS):
+            # turn on fan
+            GPIO.output(RELAY_GPIO, GPIO.LOW)
+            fan_state = 'on'
 
 
 def handle_request_from_server(sock):
 
-    request = sock.recv(1024)
-    control_relay(request.decode('utf-8'))
+    request = sock.recv(1024).decode('utf-8')
+    print('Request from server:\n', request)
+
+    global fan_mode
+    global fan_state
+    global fan_threshold
+
+    if request == 'turn on fan':
+        # turn on fan
+        GPIO.output(RELAY_GPIO, GPIO.LOW)
+        fan_state = 'on'
+        fan_mode = 'manual'
+        print('Fan: ', fan_mode, fan_state, fan_threshold)
+    elif request == 'turn off fan':
+        # turn off fan
+        GPIO.output(RELAY_GPIO, GPIO.HIGH)
+        fan_state = 'off'
+        fan_mode = 'manual'
+        print('Fan: ', fan_mode, fan_state, fan_threshold)
+    else:
+        fan_threshold = float(request.split(',')[1])
+        fan_mode = 'auto'
+        print('Fan: ', fan_mode, fan_state, fan_threshold)
 
 
 def sending_timeout_check():
@@ -90,7 +122,7 @@ def sending_timeout_check():
     if time_delta.days < 0:
         time_delta = timedelta(days=0, seconds=time_delta.seconds, microseconds=time_delta.microseconds)
 
-    if time_delta.seconds > LOG_TIMEOUT:  # DEBUG: change to LOG_TIMEOUT*60
+    if time_delta.seconds > LOG_TIMEOUT*60:
         last_time_sent = now
         return True
     else:
@@ -103,6 +135,9 @@ def event_loop():
 
         if sending_timeout_check():
             send_data_to_server(pi_socket)
+
+        if fan_mode == 'auto':
+            fan_auto_control()
 
         # Tracking incoming data:
         key_events = selector.select(timeout=0)
